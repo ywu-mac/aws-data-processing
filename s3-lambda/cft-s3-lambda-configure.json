@@ -1,0 +1,81 @@
+{
+  "Parameters": {
+    "Account": {
+        "Default": "jerrybean",
+        "Description": "AWS Account Name",
+        "Type": "String"
+    },
+    "FunctionName": {
+        "Default": "DemoS3Lambda",
+        "Description": "Lambda Function Name",
+        "Type": "String"
+    },
+    "Region": {
+        "Default": "us-east-2",
+        "Description": "AWS Region",
+        "Type": "String"
+    },
+    "RawBucketName1": {
+        "Default": "input-bucket-conf",
+        "Description": "Bucket Name",
+        "Type": "String"
+    },
+    "RawBucketName2": {
+        "Default": "output-bucket",
+        "Description": "Bucket Name",
+        "Type": "String"
+    },
+    "RoleName": {
+        "Default": "LambdaExecutionRole",
+        "Description": "Lambda Function Role Name",
+        "Type": "String"
+    }
+},
+    "Resources": {
+      "SourceBucket": {
+        "Type": "AWS::S3::Bucket",
+        "Properties": {
+          "BucketName": {
+            "Fn::Join": [
+                "-",
+                [
+                    {
+                        "Ref": "Account"
+                    },
+                    {
+                        "Ref": "Region"
+                    },
+                    {
+                        "Ref": "RawBucketName1"
+                    }
+                ]
+            ]
+        },
+        "PublicAccessBlockConfiguration": {
+            "BlockPublicAcls": false,
+            "BlockPublicPolicy": false,
+            "IgnorePublicAcls": false,
+            "RestrictPublicBuckets": false
+        },
+        "NotificationConfiguration": {
+          "LambdaConfigurations": {
+              "Event": "s3:ObjectCreated:*",
+              "Function": "DemoS3Lambda"
+            }
+        }
+        }
+      },
+      "LambdaS3Permission": {
+        "Type": "AWS::Lambda::Permission",
+        "Properties": {
+          "Action": "lambda:InvokeFunction",
+          "FunctionName": "DemoS3Lambda",
+          "Principal": "s3.amazonaws.com",
+          "SourceArn": {
+            "Fn::GetAtt": ["SourceBucket", "Arn"]
+          }
+        }
+      }
+    }
+  }
+  

@@ -1,0 +1,237 @@
+{
+    "Parameters": {
+        "Account": {
+            "Default": "jerrybean",
+            "Description": "AWS Account Name",
+            "Type": "String"
+        },
+        "FunctionName": {
+            "Default": "DemoS3Lambda",
+            "Description": "Lambda Function Name",
+            "Type": "String"
+        },
+        "Region": {
+            "Default": "us-east-2",
+            "Description": "AWS Region",
+            "Type": "String"
+        },
+        "RawBucketName1": {
+            "Default": "input-bucket",
+            "Description": "Bucket Name",
+            "Type": "String"
+        },
+        "RawBucketName2": {
+            "Default": "output-bucket",
+            "Description": "Bucket Name",
+            "Type": "String"
+        },
+        "RoleName": {
+            "Default": "LambdaExecutionRole",
+            "Description": "Lambda Function Role Name",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+      "DemoS3LambdaExecutionRole": {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+            "RoleName": {
+                "Fn::Join": [
+                    "-",
+                    [
+                        {
+                            "Ref": "Account"
+                        },
+                        {
+                            "Ref": "Region"
+                        },
+                        {
+                            "Ref": "RoleName"
+                        }
+                    ]
+                ]
+            },
+          "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "lambda.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          },
+          "Policies": [
+            {
+                "PolicyName": "LambdaLogPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "LogAccess",
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:*"
+                            ],
+                            "Resource": "arn:aws:logs:*:*:*"
+                        }
+                    ]
+                }
+            },
+            {
+              "PolicyName": "LambdaS3Policy",
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                        "Sid": "ReadAccess",
+                        "Action": [
+                            "s3:GetObject",
+                            "s3:GetObjectVersion"
+                        ],
+                        "Effect": "Allow",
+                        "Resource": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "RawBucketName1"
+                                        }
+                                    ]
+                                ]
+                            },
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "RawBucketName1"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        ]
+                  },
+                  {
+                    "Sid": "WriteAccess",
+                    "Action": [
+                        "s3:PutObject"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "arn:aws:s3:::",
+                                    {
+                                        "Ref": "RawBucketName2"
+                                    }
+                                ]
+                            ]
+                        },
+                        {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "arn:aws:s3:::",
+                                    {
+                                        "Ref": "RawBucketName2"
+                                    },
+                                    "/*"
+                                ]
+                            ]
+                        }
+                    ]
+                  }
+            
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "LambdaFunction": {
+        "Type": "AWS::Lambda::Function",
+        "Properties": {
+          "FunctionName": {
+                "Ref": "FunctionName"
+            },
+          "Handler": "demo-code-lambda-s3.lambda_handler",
+          "Role": { 
+            "Fn::GetAtt": [
+                "DemoS3LambdaExecutionRole", 
+                "Arn"
+                ] },
+          "Code": {
+            "S3Bucket": "jerrybean-us-east-2-training-bucket",
+            "S3Key": "demo-code-lambda-s3.zip"
+          },
+          "Runtime": "python3.11",
+          "Timeout": 60,
+          "PackageType": "Zip"
+        }
+      },
+      "SourceBucket": {
+        "Type": "AWS::S3::Bucket",
+        "Properties": {
+          "BucketName": {
+            "Fn::Join": [
+                "-",
+                [
+                    {
+                        "Ref": "Account"
+                    },
+                    {
+                        "Ref": "Region"
+                    },
+                    {
+                        "Ref": "RawBucketName1"
+                    }
+                ]
+            ]
+        },
+        "PublicAccessBlockConfiguration": {
+            "BlockPublicAcls": false,
+            "BlockPublicPolicy": false,
+            "IgnorePublicAcls": false,
+            "RestrictPublicBuckets": false
+        }
+        }
+      },
+      "DestinationBucket": {
+        "Type": "AWS::S3::Bucket",
+        "Properties": {
+          "BucketName": {
+            "Fn::Join": [
+                "-",
+                [
+                    {
+                        "Ref": "Account"
+                    },
+                    {
+                        "Ref": "Region"
+                    },
+                    {
+                        "Ref": "RawBucketName2"
+                    }
+                ]
+            ]
+        },
+        "PublicAccessBlockConfiguration": {
+            "BlockPublicAcls": false,
+            "BlockPublicPolicy": false,
+            "IgnorePublicAcls": false,
+            "RestrictPublicBuckets": false
+        }
+        }
+      }
+    }
+  }
+  

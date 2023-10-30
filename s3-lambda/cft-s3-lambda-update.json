@@ -1,0 +1,121 @@
+{
+  "Parameters": {
+    "Account": {
+        "Default": "jerrybean",
+        "Description": "AWS Account Name",
+        "Type": "String"
+    },
+    "FunctionName": {
+        "Default": "DemoS3Lambda",
+        "Description": "Lambda Function Name",
+        "Type": "String"
+    },
+    "Region": {
+        "Default": "us-east-2",
+        "Description": "AWS Region",
+        "Type": "String"
+    },
+    "RawBucketName1": {
+        "Default": "input-bucket",
+        "Description": "Bucket Name",
+        "Type": "String"
+    },
+    "RawBucketName2": {
+        "Default": "output-bucket",
+        "Description": "Bucket Name",
+        "Type": "String"
+    },
+    "RoleName": {
+        "Default": "LambdaExecutionRole",
+        "Description": "Lambda Function Role Name",
+        "Type": "String"
+    }
+},
+    "Resources": {
+      "LambdaFunction": {
+        "Type": "AWS::Lambda::Function",
+        "Properties": {
+          "FunctionName": {
+                "Ref": "FunctionName"
+            },
+          "Handler": "demo-code-lambda-s3.lambda_handler",
+          "Role": { 
+            "Fn::GetAtt": [
+                "DemoS3LambdaExecutionRole", 
+                "Arn"
+                ] },
+          "Code": {
+            "S3Bucket": "jerrybean-us-east-2-training-bucket",
+            "S3Key": "demo-code-lambda-s3.zip"
+          },
+          "Runtime": "python3.11",
+          "PackageType": "Zip"
+        }
+      },
+      "SourceBucket": {
+        "Type": "AWS::S3::Bucket",
+        "Properties": {
+          "BucketName": {
+            "Fn::Join": [
+                "-",
+                [
+                    {
+                        "Ref": "Account"
+                    },
+                    {
+                        "Ref": "Region"
+                    },
+                    {
+                        "Ref": "RawBucketName1"
+                    }
+                ]
+            ]
+        },
+        "PublicAccessBlockConfiguration": {
+            "BlockPublicAcls": false,
+            "BlockPublicPolicy": false,
+            "IgnorePublicAcls": false,
+            "RestrictPublicBuckets": false
+        },
+        "NotificationConfiguration": {
+          "LambdaConfigurations": [
+            {
+              "Event": "s3:ObjectCreated:*",
+              "Function": {
+                "Fn::GetAtt": [
+                  "LambdaFunction",
+                  "Arn"
+                ]
+              }
+            }
+          ]
+        }
+        }
+      },
+      "LambdaS3Permission": {
+        "Type": "AWS::Lambda::Permission",
+        "Properties": {
+          "Action": "lambda:InvokeFunction",
+          "FunctionName": {
+            "Fn::GetAtt": ["LambdaFunction", "Arn"]
+          },
+          "Principal": "s3.amazonaws.com",
+          "SourceArn": {
+            "Fn::GetAtt": ["SourceBucket", "Arn"]
+          }
+        }
+      },
+      "EventSourceMapping": {
+        "Type": "AWS::Lambda::EventSourceMapping",
+        "Properties": {
+          "EventSourceArn": {
+            "Fn::GetAtt": ["SourceBucket", "Arn"]
+          },
+          "FunctionName": {
+            "Ref": "LambdaFunction"
+          }
+        }
+      }
+    }
+  }
+  
